@@ -2,25 +2,35 @@ package com.yunushamod.android.placebook
 
 import android.Manifest
 import android.content.pm.PackageManager
-import androidx.appcompat.app.AppCompatActivity
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import com.google.android.gms.location.*
-
+import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.PointOfInterest
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.net.FetchPhotoRequest
+import com.google.android.libraries.places.api.net.FetchPlaceRequest
+import com.google.android.libraries.places.api.net.PlacesClient
+import com.yunushamod.android.placebook.adapter.BookmarkWindowInfoAdapter
 import com.yunushamod.android.placebook.databinding.ActivityMapsBinding
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var placesClient: PlacesClient
     private lateinit var mMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
-    private var locationRequest: LocationRequest? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -32,6 +42,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
         setupLocationClient()
+        setupPlacesClient()
     }
 
     private fun requestLocationPermission(){
@@ -40,6 +51,74 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun setupLocationClient(){
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+    }
+
+    private fun setupPlacesClient(){
+        placesClient = Places.createClient(this)
+    }
+
+    private fun displayPoi(pointOfInterest: PointOfInterest){
+        displayPoiGetStep(pointOfInterest)
+    }
+
+    private fun displayPoiGetStep(pointOfInterest: PointOfInterest){
+        val placeId = pointOfInterest.placeId
+        val placeFields = listOf(
+            Place.Field.ID,
+            Place.Field.NAME,
+            Place.Field.PHONE_NUMBER,
+            Place.Field.PHOTO_METADATAS,
+            Place.Field.ADDRESS,
+            Place.Field.LAT_LNG,
+        )
+        val request = FetchPlaceRequest.builder(placeId, placeFields)
+            .build()
+        placesClient.fetchPlace(request)
+            .addOnSuccessListener { response ->
+                response?.let {
+                    val place = it.place
+                    displayPoiGetPhotoStep(place)
+                }
+            }.addOnFailureListener{
+                if(it is ApiException){
+                    val statusCode = it.statusCode
+                    Log.e(TAG, "Places not found:${it.message}, statusCode: $statusCode")
+                }
+            }
+    }
+
+    private fun displayPoiGetPhotoStep(place: Place){
+        val photoMetadata = place.photoMetadatas?.get(0)
+        if(photoMetadata == null){
+            displayPoiDisplayStep(place, null)
+            return
+        }
+        val photoRequest = FetchPhotoRequest.builder(photoMetadata)
+            .setMaxWidth(resources.getDimensionPixelSize(R.dimen.default_image_width))
+            .setMaxHeight(resources.getDimensionPixelSize(R.dimen.default_image_height))
+            .build()
+        placesClient.fetchPhoto(photoRequest).addOnSuccessListener { response ->
+            response?.let {
+                val bitmap = it.bitmap
+                displayPoiDisplayStep(place, bitmap)
+            }
+        }.addOnFailureListener{
+            if(it is ApiException){
+                val statusCode = it.statusCode
+                Log.e(TAG, "Place not found: ${it.message}. statusCode: $statusCode")
+            }
+        }
+    }
+
+    private fun displayPoiDisplayStep(place: Place, photo: Bitmap?){
+        place.latLng?.let {
+            val marker = mMap.addMarker(MarkerOptions().position(it)
+                .title(place.name)
+                //.icon(iconPhoto)
+                .snippet(place.phoneNumber))
+            marker?.tag = photo
+        }
+
     }
 
     override fun onRequestPermissionsResult(
@@ -61,26 +140,11 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             requestLocationPermission()
         }else{
-            if(locationRequest == null){
-                locationRequest = LocationRequest.create()
-                locationRequest?.let{
-                    it.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-                    it.interval = 5000
-                    it.fastestInterval = 1000
-                    val locationCallback = object : LocationCallback(){
-                        override fun onLocationResult(p0: LocationResult) {
-                            super.onLocationResult(p0)
-                            getCurrentLocation()
-                        }
-                    }
-                    fusedLocationClient.requestLocationUpdates(it,locationCallback, null)
-                }
-            }
+            mMap.isMyLocationEnabled = true
             fusedLocationClient.lastLocation.addOnCompleteListener{
                 val location = it.result
                 if(location != null){
                     val latLng = LatLng(location.latitude, location.longitude)
-                    mMap.addMarker(MarkerOptions().position(latLng))
                     val update = CameraUpdateFactory.newLatLngZoom(latLng, 16.0f)
                     mMap.moveCamera(update)
                 }else {
@@ -100,12 +164,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
      */
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-
+        mMap.setInfoWindowAdapter(BookmarkWindowInfoAdapter(this))
         // Add a marker in Sydney and move the camera
         val sydney = LatLng(-34.0, 151.0)
         mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
         getCurrentLocation()
+        mMap.setOnPoiClickListener{
+            // the PointOfInterest object returned contains just three properties: name, LatLng and the PlaceId(this
+            // can be used to retrieve data from the Places API
+            displayPoi(it)
+        }
     }
 
     companion object{
