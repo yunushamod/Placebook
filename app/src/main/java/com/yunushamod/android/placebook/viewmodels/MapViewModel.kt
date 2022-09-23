@@ -25,17 +25,15 @@ class MapViewModel : ViewModel() {
         Log.i(TAG, "New bookmark added to database. Id: ${bookmark.id}")
     }
 
-    private fun bookmarkToMarkerView(bookmark: Bookmark){
-        BookmarkMarkerView(bookmark.id, LatLng(bookmark.latitude, bookmark.longitude))
+    private fun bookmarkToMarkerView(bookmark: Bookmark) : BookmarkMarkerView{
+        return BookmarkMarkerView(bookmark.id, LatLng(bookmark.latitude, bookmark.longitude))
     }
 
     private fun mapBookmarksToMarkerView(){
         bookmarks = Transformations.map(bookmarkRepo.allBookmarks){
-            it?.let{boomarks ->
-                bookmarks.map{
-                        bookmark -> {
-                            bookmarkToMarkerView(bookmark)
-                    }
+            it?.let{bkmrk ->
+                bkmrk.map {
+                    bookmarkToMarkerView(it)
                 }
             }
         }
