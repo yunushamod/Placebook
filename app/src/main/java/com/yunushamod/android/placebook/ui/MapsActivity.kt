@@ -1,4 +1,4 @@
-package com.yunushamod.android.placebook
+package com.yunushamod.android.placebook.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.lifecycle.ViewModelProvider
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -14,23 +15,25 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
-import com.google.android.gms.maps.model.PointOfInterest
+import com.google.android.gms.maps.model.*
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.FetchPhotoRequest
 import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.PlacesClient
+import com.yunushamod.android.placebook.R
 import com.yunushamod.android.placebook.adapter.BookmarkWindowInfoAdapter
 import com.yunushamod.android.placebook.databinding.ActivityMapsBinding
+import com.yunushamod.android.placebook.viewmodels.MapViewModel
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var placesClient: PlacesClient
     private lateinit var mMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
+    private val mapsViewModel: MapViewModel by lazy{
+        ViewModelProvider(this)[MapViewModel::class.java]
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -55,6 +58,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun setupPlacesClient(){
         placesClient = Places.createClient(this)
+    }
+
+    private fun setupMapListeners(){
+        mMap.setInfoWindowAdapter(BookmarkWindowInfoAdapter(this))
+        mMap.setOnPoiClickListener{
+            displayPoi(it)
+        }
+        mMap.setOnInfoWindowClickListener{
+            handleInfoWindowClick(it)
+        }
     }
 
     private fun displayPoi(pointOfInterest: PointOfInterest){
@@ -116,9 +129,37 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 .title(place.name)
                 //.icon(iconPhoto)
                 .snippet(place.phoneNumber))
-            marker?.tag = photo
+            val placeInfo = PlaceInfo(place, photo)
+            marker?.tag = placeInfo
         }
+    }
 
+    private fun handleInfoWindowClick(marker: Marker){
+        val placeInfo = marker.tag as PlaceInfo
+        if(placeInfo?.place != null){
+            mapsViewModel.addBookmarkFromPlace(placeInfo.place, placeInfo.image)
+        }
+        marker.remove()
+    }
+
+    private fun addPlaceMarker(bookmark:MapViewModel.BookmarkMarkerView): Marker?{
+        val marker = mMap.addMarker(MarkerOptions().position(bookmark.location)
+            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+            .alpha(8.0f))
+        marker?.tag = bookmark
+        return marker
+    }
+    private fun displayAllBookmarks(bookmarks: List<MapViewModel.BookmarkMarkerView>){
+        bookmarks.forEach { addPlaceMarker(it) }
+    }
+
+    private fun createBookmarkMarkerObserver(){
+        mapsViewModel.getBookmarkMarkerView()?.observe(this){
+            mMap.clear()
+            it?.let{
+                displayAllBookmarks(it)
+            }
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -164,18 +205,12 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
      */
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-        mMap.setInfoWindowAdapter(BookmarkWindowInfoAdapter(this))
-        // Add a marker in Sydney and move the camera
-        val sydney = LatLng(-34.0, 151.0)
-        mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+        setupMapListeners()
+        createBookmarkMarkerObserver()
         getCurrentLocation()
-        mMap.setOnPoiClickListener{
-            // the PointOfInterest object returned contains just three properties: name, LatLng and the PlaceId(this
-            // can be used to retrieve data from the Places API
-            displayPoi(it)
-        }
     }
+
+    class PlaceInfo(val place: Place? = null, val image: Bitmap? = null)
 
     companion object{
         private const val TAG = "MAINACTIVITY"
