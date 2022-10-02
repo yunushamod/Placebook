@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.yunushamod.android.placebook">
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
@@ -8,10 +9,15 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:theme="@style/AppTheme.NoActionBar"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.Placebook">
-
+        android:supportsRtl="true">
+        <activity
+            android:name=".ui.BookmarkDetailActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme.NoActionBar"
+            android:label="Bookmark"
+            android:windowSoftInputMode="stateHidden" />
         <!--
              TODO: Before you run your application, you need a Google Maps API key.
 
@@ -26,8 +32,10 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
-        <meta-data android:name="com.google.android.gms.version"
+        <meta-data
+            android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
+
         <activity
             android:name=".ui.MapsActivity"
             android:exported="true"

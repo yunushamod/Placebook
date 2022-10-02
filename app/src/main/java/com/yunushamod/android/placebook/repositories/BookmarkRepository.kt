@@ -6,40 +6,28 @@ import androidx.room.Room
 import com.yunushamod.android.placebook.db.BookmarkDao
 import com.yunushamod.android.placebook.db.PlaceBookDatabase
 import com.yunushamod.android.placebook.models.Bookmark
+import java.util.*
 import java.util.concurrent.Executors
 
 class BookmarkRepository private constructor(context: Context) {
-    private val executor = Executors.newSingleThreadExecutor()
     private val database = Room.databaseBuilder(context.applicationContext, PlaceBookDatabase::class.java,
         DATABASE_NAME
-    ).build()
+    ).fallbackToDestructiveMigration().build()
     private val bookmarkDao: BookmarkDao = database.bookmarkDao()
 
-    fun addBookmark(bookmark: Bookmark) {
-        executor.execute{
-            bookmarkDao.insertBookmark(bookmark)
-        }
-    }
+    fun addBookmark(bookmark: Bookmark) = bookmarkDao.insertBookmark(bookmark)
+    fun getBookmark(bookmarkId: UUID) = bookmarkDao.loadBookmark(bookmarkId)
 
-    fun updateBookmark(bookmark: Bookmark){
-        executor.execute{
-            bookmarkDao.updateBookmark(bookmark)
-        }
-    }
+    fun updateBookmark(bookmark: Bookmark) = bookmarkDao.updateBookmark(bookmark)
 
-    fun deleteBookmark(bookmark: Bookmark){
-        executor.execute{
-            bookmarkDao.deleteBookmark(bookmark)
-        }
-    }
+    fun deleteBookmark(bookmark: Bookmark) = bookmarkDao.deleteBookmark(bookmark)
 
-    fun createBoookmark(): Bookmark{
-        return Bookmark()
-    }
+    fun createBookmark() = Bookmark()
 
     val allBookmarks: LiveData<List<Bookmark>>
     get() = bookmarkDao.loadAll()
-
+    fun getLiveBookmark(bookmarkId: UUID): LiveData<Bookmark>
+    = bookmarkDao.loadLiveBookmark(bookmarkId)
     companion object{
         private const val DATABASE_NAME: String = "Placebook"
         private var INSTANCE: BookmarkRepository? = null
