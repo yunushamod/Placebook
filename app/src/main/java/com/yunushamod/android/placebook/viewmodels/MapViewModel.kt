@@ -19,7 +19,7 @@ import java.util.concurrent.Executors
 class MapViewModel(application: Application): AndroidViewModel(application) {
     private val bookmarkRepo = BookmarkRepository.getInstance()
     private val executor: Executor = Executors.newSingleThreadExecutor()
-    private var bookmarks: LiveData<List<BookmarkMarkerView>>? = null
+    private var bookmarks: LiveData<List<BookmarkView>>? = null
     fun addBookmarkFromPlace(place: Place, image: Bitmap?){
         executor.execute{
             val bookmark = bookmarkRepo.createBookmark()
@@ -39,8 +39,8 @@ class MapViewModel(application: Application): AndroidViewModel(application) {
 
 
 
-    private fun bookmarkToMarkerView(bookmark: Bookmark) : BookmarkMarkerView{
-        return BookmarkMarkerView(bookmark.id, LatLng(bookmark.latitude, bookmark.longitude), bookmark.name,
+    private fun bookmarkToMarkerView(bookmark: Bookmark) : BookmarkView{
+        return BookmarkView(bookmark.id, LatLng(bookmark.latitude, bookmark.longitude), bookmark.name,
         bookmark.phone)
     }
 
@@ -54,14 +54,14 @@ class MapViewModel(application: Application): AndroidViewModel(application) {
         }
     }
 
-    fun getBookmarkMarkerView(): LiveData<List<BookmarkMarkerView>>?{
+    fun getBookmarkMarkerView(): LiveData<List<BookmarkView>>?{
         if(bookmarks == null) mapBookmarksToMarkerView()
         return bookmarks
     }
 
     private val TAG = "Map_View_Model"
-    data class BookmarkMarkerView(var id: UUID? = null, var location: LatLng = LatLng(0.0, 0.0),
-    var name: String, var phone: String){
+    data class BookmarkView(var id: UUID? = null, var location: LatLng = LatLng(0.0, 0.0),
+                            var name: String, var phone: String){
         fun getImage(context: Context) = id?.let{
             ImageUtils.loadBitmapFromFile(context, Bookmark.generateFileName(it))
         }

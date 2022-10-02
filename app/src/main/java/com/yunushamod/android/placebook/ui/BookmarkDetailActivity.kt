@@ -16,7 +16,7 @@ import java.util.*
 class BookmarkDetailActivity : AppCompatActivity() {
     private lateinit var databinding: ActivityBookmarkDetailBinding
     private val bookmarkDetailViewModel: BookmarkDetailViewModel by viewModels()
-    private var bookmarkDetailsView:  BookmarkDetailViewModel.BookmarkDetailView? = null
+    private var bookmarkDetailsView:  BookmarkDetailViewModel.BookmarkView? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         databinding = ActivityBookmarkDetailBinding.inflate(layoutInflater)

@@ -4,7 +4,7 @@
     <data>
         <variable
             name="bookmarkDetailsView"
-            type="com.yunushamod.android.placebook.viewmodels.BookmarkDetailViewModel.BookmarkDetailView" />
+            type="com.yunushamod.android.placebook.viewmodels.BookmarkDetailViewModel.BookmarkView" />
     </data>
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"

@@ -6,8 +6,10 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -22,6 +24,7 @@ import com.google.android.libraries.places.api.net.FetchPhotoRequest
 import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.PlacesClient
 import com.yunushamod.android.placebook.R
+import com.yunushamod.android.placebook.adapter.BookmarkListAdapter
 import com.yunushamod.android.placebook.adapter.BookmarkWindowInfoAdapter
 import com.yunushamod.android.placebook.databinding.ActivityMapsBinding
 import com.yunushamod.android.placebook.viewmodels.MapViewModel
@@ -32,6 +35,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var placesClient: PlacesClient
     private lateinit var mMap: GoogleMap
     private lateinit var binding: ActivityMapsBinding
+    private lateinit var bookmarkListAdapter: BookmarkListAdapter
     private val mapsViewModel: MapViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,10 +50,14 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         setupLocationClient()
         setupPlacesClient()
         setupToolbar()
+        setupNavigationDrawer()
     }
 
     private fun setupToolbar(){
         setSupportActionBar(binding.mainViewMap.toolbar)
+        val toggle = ActionBarDrawerToggle(this, binding.drawerLayout,
+            binding.mainViewMap.toolbar, R.string.open_drawer, R.string.close_drawer)
+        toggle.syncState()
     }
 
     private fun requestLocationPermission(){
@@ -129,6 +137,13 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private fun setupNavigationDrawer(){
+        val layoutManager = LinearLayoutManager(this)
+        binding.drawerViewMaps.recyclerView.layoutManager = layoutManager
+        bookmarkListAdapter = BookmarkListAdapter(null, this)
+        binding.drawerViewMaps.recyclerView.adapter = bookmarkListAdapter
+    }
+
     private fun displayPoiDisplayStep(place: Place, photo: Bitmap?){
         place.latLng?.let {
             val marker = mMap.addMarker(MarkerOptions().position(it)
@@ -150,17 +165,17 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
                 marker.remove()
             }
-            is MapViewModel.BookmarkMarkerView ->{
-                val bookmarkMarkerView = (marker.tag as MapViewModel.BookmarkMarkerView)
+            is MapViewModel.BookmarkView ->{
+                val bookmarkView = (marker.tag as MapViewModel.BookmarkView)
                 marker.hideInfoWindow()
-                bookmarkMarkerView.id?.let{
+                bookmarkView.id?.let{
                     startBookmarkDetail(it)
                 }
             }
         }
     }
 
-    private fun addPlaceMarker(bookmark:MapViewModel.BookmarkMarkerView): Marker?{
+    private fun addPlaceMarker(bookmark:MapViewModel.BookmarkView): Marker?{
         val marker = mMap.addMarker(MarkerOptions().position(bookmark.location)
             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
             .title(bookmark.name)
@@ -169,7 +184,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         marker?.tag = bookmark
         return marker
     }
-    private fun displayAllBookmarks(bookmarks: List<MapViewModel.BookmarkMarkerView>){
+    private fun displayAllBookmarks(bookmarks: List<MapViewModel.BookmarkView>){
         bookmarks.forEach { addPlaceMarker(it) }
     }
 
@@ -178,6 +193,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             mMap.clear()
             it?.let{
                 displayAllBookmarks(it)
+                bookmarkListAdapter.setBookmarkData(it)
             }
         }
     }

@@ -15,7 +15,7 @@ import java.util.concurrent.Executors
 
 class BookmarkDetailViewModel(application: Application): AndroidViewModel(application) {
     private val bookmarkRepository:  BookmarkRepository = BookmarkRepository.getInstance()
-    private var bookmarkDetailsView: LiveData<BookmarkDetailView>? = null
+    private var bookmarkDetailsView: LiveData<BookmarkView>? = null
     private val executor: Executor = Executors.newSingleThreadExecutor()
     private fun mapBookmarkToBookmarkView(bookmarkId: UUID){
         val bookmark = bookmarkRepository.getLiveBookmark(bookmarkId)
@@ -24,13 +24,13 @@ class BookmarkDetailViewModel(application: Application): AndroidViewModel(applic
         }
     }
 
-    fun getBookmark(bookmarkId: UUID): LiveData<BookmarkDetailView>?{
+    fun getBookmark(bookmarkId: UUID): LiveData<BookmarkView>?{
         if(bookmarkDetailsView == null) mapBookmarkToBookmarkView(bookmarkId)
         return bookmarkDetailsView
     }
 
-    private fun bookmarkToBookmarkView(bookmark: Bookmark): BookmarkDetailView{
-        return BookmarkDetailView(
+    private fun bookmarkToBookmarkView(bookmark: Bookmark): BookmarkView{
+        return BookmarkView(
             bookmark.id,
             bookmark.name,
             bookmark.phone,
@@ -39,7 +39,7 @@ class BookmarkDetailViewModel(application: Application): AndroidViewModel(applic
         )
     }
 
-    fun updateBookmark(bookmarkView: BookmarkDetailView){
+    fun updateBookmark(bookmarkView: BookmarkView){
         executor.execute{
             val bookmark = bookmarkViewToBookmark(bookmarkView)
             bookmark?.let {
@@ -49,7 +49,7 @@ class BookmarkDetailViewModel(application: Application): AndroidViewModel(applic
     }
 
 
-    private fun bookmarkViewToBookmark(bookmarkView: BookmarkDetailView): Bookmark?{
+    private fun bookmarkViewToBookmark(bookmarkView: BookmarkView): Bookmark?{
         val bookmark = bookmarkView.id?.let{
             bookmarkRepository.getBookmark(it)
         }
@@ -63,7 +63,7 @@ class BookmarkDetailViewModel(application: Application): AndroidViewModel(applic
         return bookmark
     }
 
-    data class BookmarkDetailView(
+    data class BookmarkView(
         var id: UUID? = null,
         var name: String = "",
         var phone: String = "",

@@ -1,7 +1,6 @@
 package com.yunushamod.android.placebook.adapter
 
 import android.app.Activity
-import android.graphics.Bitmap
 import android.view.View
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.Marker
@@ -21,7 +20,7 @@ class BookmarkWindowInfoAdapter(private val context: Activity) : GoogleMap.InfoW
         val imageView = binding.photo
         when(p0.tag){
             is MapsActivity.PlaceInfo -> imageView.setImageBitmap((p0.tag as MapsActivity.PlaceInfo).image)
-            is MapViewModel.BookmarkMarkerView -> imageView.setImageBitmap((p0.tag as MapViewModel.BookmarkMarkerView).getImage(context))
+            is MapViewModel.BookmarkView -> imageView.setImageBitmap((p0.tag as MapViewModel.BookmarkView).getImage(context))
         }
         return binding.root
     }
